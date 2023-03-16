@@ -34,11 +34,10 @@ process bowtie2Index
 
         """
         mkdir "!{indexDir}"
-        cd "!{indexDir}"
 
         bowtie2-build \
-            "../!{fastaFile}" \
-            "!{genomeInfo.base}"
+            "!{fastaFile}" \
+            "!{indexDir}/!{genomeInfo.base}"
         """
 }
 
