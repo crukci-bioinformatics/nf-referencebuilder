@@ -2,7 +2,7 @@
 
 DIR=$(dirname $0)
 
-TAG="2.0.0"
+TAG="2.1.0"
 REPO="crukcibioinformatics/referencebuilder:$TAG"
 
 # Can't do this in the Dockerfile.

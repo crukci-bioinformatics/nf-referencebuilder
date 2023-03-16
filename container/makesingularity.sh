@@ -1,6 +1,6 @@
 #!/bin/sh
 
-TAG="2.0.0"
+TAG="2.1.0"
 REPO="crukcibioinformatics/referencebuilder:$TAG"
 SIF="referencebuilder-$TAG.sif"
 
