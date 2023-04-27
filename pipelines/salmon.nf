@@ -75,7 +75,7 @@ process createDecoys
         decoysFile = "${genomeInfo.base}.decoys.txt"
 
         """
-        cat "!{transcriptsFile}" | \
+        cat "!{genomeFile}" | \
         grep '>' | \
         cut -d " " -f 1 | \
         sed 's/>//' > \
@@ -136,7 +136,7 @@ process transcriptToGene
     publishDir "${assemblyPath(genomeInfo)}/salmon-${params.SALMON_VERSION}", mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(transcriptsFile), path(indexFile)
+        tuple val(genomeInfo), path(genomeFile), path(transcriptsFile)
 
     output:
         tuple val(genomeInfo), path(mappingFile)
@@ -146,7 +146,7 @@ process transcriptToGene
 
         """
         echo -e "TxID\tGeneID" > !{mappingFile}
-        cat !{transcriptsFile} | \
+        zcat !{transcriptsFile} | \
             egrep '^>' | \
             cut -d '|' -f1,2 | \
             sed -e 's/>//' | \
@@ -176,12 +176,12 @@ workflow salmonWF
 
         fetchTranscripts(processingChannel) | installTranscripts | indexTranscripts
 
-        createDecoys(installTranscripts.out)
+        createDecoys(fetchTranscripts.out)
 
         combineChannel = installTranscripts.out.map
         {
             genomeInfo, genomeFile, transcriptsFile ->
-            tuple genomeInfo, [ genomeFile, transcriptsFile ]
+            tuple genomeInfo, [ transcriptsFile, genomeFile ]
         }
 
         combineGenomeAndTranscripts(combineChannel)
@@ -202,10 +202,10 @@ workflow salmonWF
 
         salmonIndex(indexingChannel)
 
-        transcriptToGeneChannel = installTranscripts.out
+        transcriptToGeneChannel = fetchTranscripts.out
             .filter
             {
-                genomeInfo, transcriptsFile, indexFile ->
+                genomeInfo, genomeFile, transcriptsFile ->
                 def salmonDir = "${assemblyPath(genomeInfo)}/salmon-${params.SALMON_VERSION}"
                 return !file("${salmonDir}/tx2gene.tsv").exists()
             }
