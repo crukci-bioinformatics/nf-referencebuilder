@@ -20,7 +20,7 @@ def readGenomeInfo(propsFile)
     genomeInfo['base'] = genomeInfo['abbreviation'] + '.' + genomeInfo['version']
 
     def transcriptUrl = genomeInfo['url.transcripts.fasta']
-    genomeInfo['gencode'] = isNotEmpty(transcriptUrl) && transcriptUrl.startsWith("ftp://ftp.ebi.ac.uk/pub/databases/gencode");
+    genomeInfo['gencode'] = isNotEmpty(transcriptUrl) && transcriptUrl.contains("ftp.ebi.ac.uk/pub/databases/gencode");
 
     return genomeInfo
 }
