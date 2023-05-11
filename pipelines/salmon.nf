@@ -148,8 +148,8 @@ process transcriptToGene
         echo -e "TxID\tGeneID" > !{mappingFile}
         zcat !{transcriptsFile} | \
             egrep '^>' | \
-            cut -d '|' -f1,2 | \
-            sed -e 's/>//' | \
+            cut -d '|' -f 1,2 | \
+            sed -e 's/>//' -e 's/\\.[0-9]*\$//' | \
             tr '|' '\t' \
             >> !{mappingFile}
         """
