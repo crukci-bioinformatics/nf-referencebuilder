@@ -6,7 +6,8 @@
     the source format.
 */
 
-include { assemblyPath; javaMemMB } from '../functions/functions'
+include { assemblyPath } from '../functions/functions'
+include { javaMemMB } from '../modules/nextflow-support/functions'
 
 /*
  * Processes where the annotation source is GTF.

@@ -9,8 +9,9 @@
     "recreateFasta" task descriptor for more information.
 */
 
-include { assemblyPath; javaMemMB } from '../functions/functions'
+include { assemblyPath } from '../functions/functions'
 include { maxReadsInRam } from '../functions/picard'
+include { javaMemMB } from '../modules/nextflow-support/functions'
 
 process fetchFasta
 {

@@ -4,7 +4,8 @@
  * See https://redmine-bioinformatics.cruk.cam.ac.uk/issues/7243
  */
 
-include { assemblyPath; javaMemMB } from '../functions/functions'
+include { assemblyPath } from '../functions/functions'
+include { javaMemMB } from '../modules/nextflow-support/functions'
 
 process fetchTranscripts
 {

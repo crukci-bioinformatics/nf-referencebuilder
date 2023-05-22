@@ -5,7 +5,8 @@
     UCSC as XRef files.
 */
 
-include { assemblyPath; javaMemMB } from '../functions/functions'
+include { assemblyPath } from '../functions/functions'
+include { javaMemMB } from '../modules/nextflow-support/functions'
 
 /*
  * Fetch gene names from BioMart.
