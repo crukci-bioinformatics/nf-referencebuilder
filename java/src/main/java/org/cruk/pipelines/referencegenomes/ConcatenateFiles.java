@@ -20,10 +20,10 @@ import java.util.concurrent.Callable;
 
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.cruk.common.compression.CompressionOutputStreamBuilder;
 import org.cruk.common.compression.CompressionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -45,7 +45,7 @@ import picocli.CommandLine.Parameters;
                  "Compression level must be in the range 0-9 inclusive."})
 public class ConcatenateFiles implements Callable<Integer>
 {
-    private static final Logger logger = LogManager.getLogger(ConcatenateFiles.class);
+    private static final Logger logger = LoggerFactory.getLogger(ConcatenateFiles.class);
 
     @Option(names = { "-z", "--gzip" }, description = "Zip output as it a written (same as \"-j gz\").")
     boolean zip;

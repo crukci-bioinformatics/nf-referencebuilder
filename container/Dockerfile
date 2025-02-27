@@ -1,25 +1,27 @@
-FROM    crukcibioinformatics/alignment:4.2.0
+FROM    crukcibioinformatics/alignment:4.3.1
 
 LABEL   maintainer="Richard Bowers<richard.bowers@cruk.cam.ac.uk>"
 
 ARG INSTALL_DIR=/opt
 ARG BUILD_DIR=/var/tmp/alignment_software_build
 
-ARG JELLYFISH_V=2.3.0
-ARG SALMON_V=1.9.0
+ARG JELLYFISH_V=2.3.1
+ARG SALMON_V=1.10.3
 
 ARG TAROPTS="--no-same-owner --no-same-permissions"
 
-RUN dnf install -y python3 python3-urllib3
+RUN dnf install -y autoconf cmake python3 python3-urllib3
 
 RUN mkdir -p ${INSTALL_DIR} ${BUILD_DIR}
 
 # Salmon
 RUN cd ${BUILD_DIR}; \
-    wget -O salmon-${SALMON_V}.tar.gz https://github.com/COMBINE-lab/salmon/releases/download/v${SALMON_V}/salmon-${SALMON_V}_linux_x86_64.tar.gz && \
+    wget -O salmon-${SALMON_V}.tar.gz https://github.com/COMBINE-lab/salmon/archive/refs/tags/v${SALMON_V}.tar.gz && \
     tar ${TAROPTS} -xzf salmon-${SALMON_V}.tar.gz && \
-    cp -rp salmon-${SALMON_V}_linux_x86_64/* /usr/local && \
-    rm -f /usr/local/sample_data.tgz
+    cd ${BUILD_DIR}/salmon-${SALMON_V} && mkdir build && cd build && \
+    cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DFETCH_BOOST=TRUE .. && \
+    make && \
+    make install
 
 # UCSC Tools
 RUN cd /usr/local/bin; \

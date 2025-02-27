@@ -1,12 +1,12 @@
 #!/bin/sh
 
-TAG="2.1.0"
+TAG="2.1.1"
 REPO="crukcibioinformatics/referencebuilder:$TAG"
-SIF="referencebuilder-$TAG.sif"
+IMAGE="referencebuilder-$TAG.sif"
 
-sudo rm -f referencebuilder*.sif
+sudo rm -f "$IMAGE"
 
-sudo singularity build "$SIF" docker-daemon://${REPO}
-sudo chown $USER "$SIF"
-chmod a-x "$SIF"
+sudo singularity build "$IMAGE" docker-daemon://${REPO}
+sudo chown $USER "$IMAGE"
+chmod a-x "$IMAGE"
 

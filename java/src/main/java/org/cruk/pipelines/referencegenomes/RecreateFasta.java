@@ -36,10 +36,10 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.cruk.common.comparators.numericname.NumericalFilenameComparator;
 import org.cruk.common.compression.CompressionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -72,7 +72,7 @@ public class RecreateFasta implements Callable<Integer>
     private static final int smallBufferSize = 32 * 1024;
     private static final int largeBufferSize = 1024 * 1024;
 
-    private static final Logger logger = LogManager.getLogger(RecreateFasta.class);
+    private static final Logger logger = LoggerFactory.getLogger(RecreateFasta.class);
 
     private byte[] copyBuffer;
 
