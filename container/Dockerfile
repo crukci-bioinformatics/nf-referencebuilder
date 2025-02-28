@@ -10,7 +10,7 @@ ARG SALMON_V=1.10.3
 
 ARG TAROPTS="--no-same-owner --no-same-permissions"
 
-RUN dnf install -y autoconf cmake python3 python3-urllib3
+RUN dnf install -y autoconf cmake diffutils python3 python3-urllib3
 
 RUN mkdir -p ${INSTALL_DIR} ${BUILD_DIR}
 
