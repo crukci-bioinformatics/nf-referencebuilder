@@ -24,9 +24,11 @@ RUN cd ${BUILD_DIR}; \
     make install
 
 # UCSC Tools
+# Newer versions won't run on Rocky8: glibc is tool old.
+# Salmon won't build on Rocky 9 (glibc too new!).
 RUN cd /usr/local/bin; \
-    wget http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/genePredToGtf && \
-    wget http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gtfToGenePred && \
+    wget http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64.v385/genePredToGtf && \
+    wget http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64.v385/gtfToGenePred && \
     chmod a+rx genePredToGtf gtfToGenePred
 
 # Jellyfish
