@@ -1,7 +1,6 @@
 #!/bin/sh
 
-TAG="2.1.1"
-REPO="crukcibioinformatics/referencebuilder:$TAG"
+DIR=$(dirname $0)
+source $DIR/settings.sh
 
 sudo docker push "$REPO"
-
