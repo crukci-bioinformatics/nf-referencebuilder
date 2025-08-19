@@ -8,3 +8,4 @@ cp $DIR/../java/target/nf-referencebuilder-*.jar $DIR/nf-referencebuilder.jar
 
 sudo docker build --tag "$REPO" --file Dockerfile .
 
+sudo docker build --tag "$SALMON_REPO" --file Dockerfile_salmon .

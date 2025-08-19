@@ -8,7 +8,7 @@
     <groupId>org.cruk.pipelines</groupId>
     <artifactId>nf-referencebuilder</artifactId>
     <packaging>jar</packaging>
-    <version>2.1.1</version>
+    <version>2.1.2</version>
 
     <name>Reference Genome Builder Tools</name>
     <description>
@@ -114,12 +114,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-clean-plugin</artifactId>
-                    <version>3.3.2</version>
+                    <version>3.4.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.13.0</version>
+                    <version>3.14.0</version>
                     <configuration>
                         <source>21</source>
                         <target>21</target>
@@ -132,22 +132,22 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.6.1</version>
+                    <version>3.8.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-deploy-plugin</artifactId>
-                    <version>3.1.2</version>
+                    <version>3.1.4</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-install-plugin</artifactId>
-                    <version>3.1.2</version>
+                    <version>3.1.4</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.4.1</version>
+                    <version>3.4.2</version>
                     <configuration>
                         <archive>
                             <index>true</index>
@@ -169,7 +169,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.5.3</version>
+                    <version>3.6.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -184,9 +184,10 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.2.5</version>
+                    <version>3.5.3</version>
                     <configuration>
                         <useModulePath>false</useModulePath>
+                        <argLine>-XX:+EnableDynamicAgentLoading</argLine>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -200,7 +201,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.6.3</version>
+                    <version>3.11.2</version>
                     <configuration>
                         <source>21</source>
                         <encoding>UTF-8</encoding>
@@ -209,12 +210,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-project-info-reports-plugin</artifactId>
-                    <version>3.5.0</version>
+                    <version>3.9.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-report-plugin</artifactId>
-                    <version>3.2.5</version>
+                    <version>3.5.3</version>
                 </plugin>
 
                 <!-- Third party plugins -->
@@ -253,7 +254,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>
-                <version>2.16.2</version>
+                <version>2.18.0</version>
                 <configuration>
                     <generateBackupPoms>false</generateBackupPoms>
                 </configuration>
@@ -261,7 +262,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.4.1</version>
+                <version>3.5.0</version>
                 <executions>
                     <execution>
                         <id>enforce-maven</id>
@@ -287,7 +288,7 @@
                         <path>
                             <groupId>info.picocli</groupId>
                             <artifactId>picocli-codegen</artifactId>
-                            <version>4.7.3</version>
+                            <version>4.7.7</version>
                         </path>
                     </annotationProcessorPaths>
                     <compilerArgs>
@@ -386,7 +387,7 @@
                         <link>https://jakarta.ee/specifications/platform/10/apidocs</link>
                         <link>https://www.slf4j.org/apidocs/</link>
                         <link>https://commons.apache.org/proper/commons-beanutils/javadocs/v1.9.4/apidocs</link>
-                        <link>https://commons.apache.org/proper/commons-collections/javadocs/api-4.4</link>
+                        <link>https://commons.apache.org/proper/commons-collections/apidocs</link>
                         <link>https://commons.apache.org/proper/commons-compress/apidocs</link>
                         <link>https://commons.apache.org/proper/commons-io/javadocs/api-release</link>
                         <link>https://commons.apache.org/proper/commons-lang/javadocs/api-release</link>
@@ -403,7 +404,7 @@
             <dependency>
                 <groupId>com.github.broadinstitute</groupId>
                 <artifactId>picard</artifactId>
-                <version>3.3.0</version>
+                <version>3.4.0</version>
                 <exclusions>
                     <exclusion>
                         <groupId>commons-logging</groupId>
@@ -421,12 +422,12 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-collections4</artifactId>
-                <version>4.4</version>
+                <version>4.5.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
-                <version>1.26.1</version>
+                <version>1.27.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -437,18 +438,18 @@
             <dependency>
                 <groupId>info.picocli</groupId>
                 <artifactId>picocli</artifactId>
-                <version>4.7.3</version>
+                <version>4.7.7</version>
             </dependency>
 
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>2.0.16</version>
+                <version>2.0.17</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-bom</artifactId>
-                <version>2.24.1</version>
+                <version>2.24.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -456,7 +457,7 @@
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>5.11.2</version>
+                <version>5.12.2</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -467,7 +468,7 @@
         <dependency>
             <groupId>org.cruk.common</groupId>
             <artifactId>cruk-commons</artifactId>
-            <version>2.4.1</version>
+            <version>2.5.0</version>
         </dependency>
 
         <dependency>

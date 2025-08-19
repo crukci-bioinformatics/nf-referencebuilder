@@ -104,6 +104,8 @@ process salmonIndex
     maxRetries 3
     cpus 8
 
+    container = "crukcibioinformatics/salmon:1.10.3"
+
     tag = { "${genomeInfo.base} k${kmer}" }
 
     publishDir "${assemblyPath(genomeInfo)}/salmon-${params.SALMON_VERSION}", mode: 'copy'

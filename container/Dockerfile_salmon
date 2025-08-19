@@ -1,0 +1,32 @@
+FROM    rockylinux/rockylinux:8.10
+
+LABEL   maintainer="Richard Bowers<richard.bowers@cruk.cam.ac.uk>"
+
+ARG INSTALL_DIR=/opt
+ARG BUILD_DIR=/var/tmp/alignment_software_build
+
+ARG SALMON_V=1.10.3
+
+ARG TAROPTS="--no-same-owner --no-same-permissions"
+
+RUN dnf install -y dnf-plugins-core epel-release
+RUN dnf config-manager --set-enabled powertools
+RUN dnf makecache && dnf update -y
+RUN dnf install -y \
+    autoconf bzip2 bzip2-devel cmake diffutils findutils \
+    gcc-c++ libcurl-devel make unzip wget xz-devel zlib-devel
+
+RUN mkdir -p ${INSTALL_DIR} ${BUILD_DIR}
+
+# Salmon
+# Salmon won't build on Rocky 9 (glibc too new!). https://github.com/COMBINE-lab/salmon/issues/953
+RUN cd ${BUILD_DIR}; \
+    wget -O salmon-${SALMON_V}.tar.gz https://github.com/COMBINE-lab/salmon/archive/refs/tags/v${SALMON_V}.tar.gz && \
+    tar ${TAROPTS} -xzf salmon-${SALMON_V}.tar.gz && \
+    cd ${BUILD_DIR}/salmon-${SALMON_V} && mkdir build && cd build && \
+    cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DFETCH_BOOST=TRUE .. && \
+    make && \
+    make install
+
+## Clean up
+RUN cd / && rm -rf ${BUILD_DIR}
