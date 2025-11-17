@@ -1,4 +1,4 @@
-TAG="2.1.2"
+TAG="2.1.3"
 REPO="crukcibioinformatics/referencebuilder:$TAG"
 IMAGE="referencebuilder-$TAG.sif"
 
