@@ -2,5 +2,5 @@ To build the Java code for the container, just run:
 
 mvn clean package
 
-You will need Maven > 3.5 and Java >= 17 on your path.
+You will need Maven > 3.6.3 and Java >= 21 on your path.
 

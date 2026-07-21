@@ -1,4 +1,4 @@
-FROM    crukcibioinformatics/alignment:4.3.4
+FROM    crukcibioinformatics/alignment:5.0.0
 
 LABEL   maintainer="Richard Bowers<richard.bowers@cruk.cam.ac.uk>"
 
