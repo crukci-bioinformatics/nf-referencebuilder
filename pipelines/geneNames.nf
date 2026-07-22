@@ -1,3 +1,8 @@
+nextflow.enable.types = true
+
+include { javaMemoryOptions } from 'plugin/nf-crukci-support'
+include { assemblyPath } from '../functions'
+
 /*
     Pipeline to fetch and prepare gene names files.
 
@@ -13,20 +18,20 @@ process downloadBioMart
 {
     label 'fetcher'
 
-    publishDir "${assemblyPath(genomeInfo)}/annotation", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}/annotation" }, mode: 'copy'
 
     input:
-        val(genomeInfo)
+        genomeInfo: Properties
 
     output:
-        tuple val(genomeInfo), path(geneNamesFile)
+        record(genomeInfo: genomeInfo, geneNamesFile: file(geneNamesFile))
 
     shell:
         geneNamesFile = "gene.names.${genomeInfo.base}.txt"
         martName = "${genomeInfo.martname}_gene_ensembl"
 
         """
-        wget -O !{geneNamesFile} \
+        wget !{params.wgetOptions} -O "!{geneNamesFile}" \
         http://www.ensembl.org/biomart/martservice?query="<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?><!DOCTYPE Query><Query virtualSchemaName=\\"default\\" formatter=\\"TSV\\" header=\\"0\\" uniqueRows=\\"1\\" count=\\"\\" datasetConfigVersion=\\"0.6\\"><Dataset name=\\"!{martName}\\" interface=\\"default\\"><Attribute name=\\"ensembl_gene_id\\"/><Attribute name=\\"external_gene_name\\"/><Attribute name=\\"description\\"/></Dataset></Query>"
         """
 }
@@ -40,31 +45,30 @@ process fetchXRef
     label 'fetcher'
 
     input:
-        val(genomeInfo)
+        genomeInfo: Properties
 
     output:
-        tuple val(genomeInfo), path(xrefFile)
+        record(genomeInfo: genomeInfo, xrefFile: file(xrefFile))
 
     shell:
         xrefFile = "xref.txt.gz"
 
         """
-        wget -O !{xrefFile} "!{genomeInfo['url.xref']}"
+        wget !{params.wgetOptions} -O "!{xrefFile}" "!{genomeInfo['url.xref']}"
         """
 }
 
 process expandXRef
 {
     input:
-        tuple val(genomeInfo), path(inputFiles)
+        record(genomeInfo: Properties, xrefFile: Path)
 
     output:
-        tuple val(genomeInfo), path(outputFile)
+        record(genomeInfo: genomeInfo, xrefFile: file(outputFile))
 
     shell:
-        outputFile = "xref.txt"
-
-        javaMem = javaMemMB(task)
+        javaMem = javaMemoryOptions(task).jvmOpts
+        inputFiles = [ xrefFile ]
         outputFile = "xref.txt"
         template "ConcatenateFiles.sh"
 }
@@ -73,63 +77,64 @@ process xrefToGeneNames
 {
     label 'tiny'
 
-    publishDir "${assemblyPath(genomeInfo)}/annotation", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}/annotation" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(xrefFile)
+        record(genomeInfo: Properties, xrefFile: Path)
 
     output:
-        tuple val(genomeInfo), path(geneNamesFile)
+        record(genomeInfo: genomeInfo, geneNamesFile: file(geneNamesFile))
 
     shell:
         geneNamesFile = "gene.names.${genomeInfo.base}.txt"
 
         """
         cut -f 1,5,8 \
-        < !{xrefFile} \
-        > !{geneNamesFile}
+        < "!{xrefFile}" \
+        > "!{geneNamesFile}"
         """
 }
 
 /*
- * Work flow for the gene names file.
+ * Work flow and functions for the gene names file.
  */
+
+def whichFormatCondition(genomeInfo: Properties)
+{
+    if (genomeInfo['martname'])
+        return 'biomart'
+
+    if (genomeInfo['url.xref'])
+        return 'xref'
+
+    return 'none'
+}
 
 workflow geneNamesWF
 {
     take:
-        genomeInfoChannel
+        genomeInfoChannel: Channel<Properties>
 
     main:
-        geneNamesChannel = genomeInfoChannel
-            .filter \
-            {
-                genomeInfo ->
-                def annotationDir = "${assemblyPath(genomeInfo)}/annotation"
-                def requiredFile = file("${annotationDir}/gene.names.${genomeInfo.base}.txt")
-                return !requiredFile.exists()
-            }
-
-        def whichFormatCondition =
+        geneNamesChannel = genomeInfoChannel.filter \
         {
             genomeInfo ->
-            if (genomeInfo['martname'])
-                return 'biomart'
-
-            if (genomeInfo['url.xref'])
-                return 'xref'
-
-            return 'none'
+            def annotationDir = "${assemblyPath(genomeInfo)}/annotation"
+            def requiredFile = file("${annotationDir}/gene.names.${genomeInfo.base}.txt")
+            return !requiredFile.exists()
         }
 
         sourceChoice = geneNamesChannel.branch \
         {
-            biomart: whichFormatCondition(it) == 'biomart'
-            xref: whichFormatCondition(it) == 'xref'
+            genomeInfo ->
+            biomart: whichFormatCondition(genomeInfo) == 'biomart'
+            xref: whichFormatCondition(genomeInfo) == 'xref'
             none: true
         }
 
         downloadBioMart(sourceChoice.biomart)
 
-        fetchXRef(sourceChoice.xref) | expandXRef | xrefToGeneNames
+        sourceXRef = fetchXRef(sourceChoice.xref)
+        expandedXRef = expandXRef(sourceXRef)
+        geneNamesXRef = xrefToGeneNames(expandedXRef)
 }

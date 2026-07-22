@@ -285,7 +285,6 @@ workflow annotationWF
         gtfEnsGene = gtfFromEnsGene(expandedEnsGene, hgConfChannel)
         refFlatEnsGene = refFlatFromEnsGene(expandedEnsGene)
 
-        /*
         gtfAlreadyHere = processingChoice.done.map \
         {
             genomeInfo ->
@@ -305,5 +304,4 @@ workflow annotationWF
     emit:
         gtfChannel: Channel<Record> = gtfChannel
         refFlatChannel: Channel<Record> = refFlatChannel
-        */
 }
