@@ -14,7 +14,7 @@ RUN dnf config-manager --set-enabled powertools
 RUN dnf makecache && dnf update -y
 RUN dnf install -y \
     autoconf bzip2 bzip2-devel cmake diffutils findutils \
-    gcc-c++ libcurl-devel make unzip wget xz-devel zlib-devel
+    gcc-c++ libcurl-devel make procps-ng unzip wget xz-devel zlib-devel
 
 RUN mkdir -p ${INSTALL_DIR} ${BUILD_DIR}
 

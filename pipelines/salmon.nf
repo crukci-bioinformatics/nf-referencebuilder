@@ -1,3 +1,8 @@
+nextflow.enable.types = true
+
+include { javaMemoryOptions } from 'plugin/nf-crukci-support'
+include { assemblyPath } from '../functions'
+
 /*
  * Building salmon indexes isn't a simple case of running a tool on a
  * reference file as most of the others are.
@@ -8,54 +13,52 @@ process fetchTranscripts
 {
     label 'tiny'
 
-    when:
-        genomeInfo['url.transcripts.fasta'] != null
-
     input:
-        tuple val(genomeInfo), path(genomeFile)
+        record(genomeInfo: Properties, genomeFile: Path)
 
     output:
-        tuple val(genomeInfo), path(genomeFile), path(outputFile)
+        record(genomeInfo: genomeInfo, genomeFile: genomeFile, transcriptsFile: file(outputFile))
 
     shell:
         outputFile = "transcripts"
 
         """
-        wget -O !{outputFile} "!{genomeInfo['url.transcripts.fasta']}"
+        wget !{params.wgetOptions} -O "!{outputFile}" "!{genomeInfo['url.transcripts.fasta']}"
         """
 }
 
 process installTranscripts
 {
-    publishDir "${assemblyPath(genomeInfo)}/fasta", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}/fasta" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(genomeFile), path(inputFiles)
+        record(genomeInfo: Properties, genomeFile: Path, transcriptsFile: Path)
 
     output:
-        tuple val(genomeInfo), path(genomeFile), path(outputFile)
+        record(genomeInfo: genomeInfo, genomeFile: genomeFile, transcriptsFile: file(outputFile))
 
     shell:
-        javaMem = javaMemMB(task)
+        javaMem = javaMemoryOptions(task).jvmOpts
+        inputFiles = [ transcriptsFile ]
         outputFile = "${genomeInfo.base}.transcripts.fa"
         template "ConcatenateFiles.sh"
 }
 
 process indexTranscripts
 {
-    publishDir "${assemblyPath(genomeInfo)}/fasta", mode: 'copy', pattern: '*.fai'
+    publishDir { "${assemblyPath(genomeInfo)}/fasta" }, mode: 'copy', pattern: '*.fai'
 
     input:
-        tuple val(genomeInfo), path(genomeFile), path(transcriptsFile)
+        record(genomeInfo: Properties, genomeFile: Path, transcriptsFile: Path)
 
     output:
-        tuple val(genomeInfo), path(transcriptsFile), path(indexFile)
+        record(genomeInfo: genomeInfo, transcriptsFile: transcriptsFile, indexFile: file(indexFile))
 
     shell:
         indexFile = transcriptsFile.name + ".fai"
 
         """
-        samtools faidx !{transcriptsFile}
+        samtools faidx "!{transcriptsFile}"
         """
 }
 
@@ -64,10 +67,10 @@ process createDecoys
     label 'tiny'
 
     input:
-        tuple val(genomeInfo), path(genomeFile), path(transcriptsFile)
+        record(genomeInfo: Properties, genomeFile: Path, transcriptsFile: Path)
 
     output:
-        tuple val(genomeInfo), path(decoysFile)
+        record(genomeInfo: genomeInfo, decoysFile: file(decoysFile))
 
     shell:
         decoysFile = "${genomeInfo.base}.decoys.txt"
@@ -77,20 +80,20 @@ process createDecoys
         grep '>' | \
         cut -d " " -f 1 | \
         sed 's/>//' > \
-        ${decoysFile}
+        "${decoysFile}"
         """
 }
 
 process combineGenomeAndTranscripts
 {
     input:
-        tuple val(genomeInfo), path(inputFiles)
+        record(genomeInfo: Properties, inputFiles: Collection<Path>)
 
     output:
-        tuple val(genomeInfo), path(outputFile)
+        record(genomeInfo: genomeInfo, outputFile: file(outputFile))
 
     shell:
-        javaMem = javaMemMB(task)
+        javaMem = javaMemoryOptions(task).jvmOpts
         outputFile = "${genomeInfo.base}.all.fa"
         template "ConcatenateFiles.sh"
 }
@@ -98,20 +101,14 @@ process combineGenomeAndTranscripts
 process salmonIndex
 {
     label 'builder'
-    maxRetries 3
-    cpus 8
 
-    container = "crukcibioinformatics/salmon:1.10.3"
-
-    tag = { "${genomeInfo.base} k${kmer}" }
-
-    publishDir "${assemblyPath(genomeInfo)}/salmon-${params.SALMON_VERSION}", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}/salmon-${params.SALMON_VERSION}" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(fastaFile), path(decoysFile), val(kmer)
+        record(genomeInfo: Properties, fastaFile: Path, decoysFile: Path, kmer: Integer)
 
     output:
-        tuple val(genomeInfo), path(indexDir)
+        record(genomeInfo: genomeInfo, indexDir: file(indexDir))
 
     shell:
         indexDir = "k${kmer}"
@@ -123,7 +120,7 @@ process salmonIndex
             --kmerLen !{kmer} \
             !{genomeInfo.gencode ? '--gencode' : ''} \
             --threads !{task.cpus} \
-            --index !{indexDir} \
+            --index "!{indexDir}" \
             --tmpdir temp
         """
 }
@@ -133,82 +130,87 @@ process transcriptToGene
     label 'tiny'
     executor 'local'
 
-    publishDir "${assemblyPath(genomeInfo)}/salmon-${params.SALMON_VERSION}", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}/salmon-${params.SALMON_VERSION}" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(genomeFile), path(transcriptsFile)
+        record(genomeInfo: Properties, genomeFile: Path, transcriptsFile: Path)
 
     output:
-        tuple val(genomeInfo), path(mappingFile)
+        record(genomeInfo: genomeInfo, mappingFile: file(mappingFile))
 
     shell:
         mappingFile = "tx2gene.tsv"
 
         """
-        echo -e "TxID\tGeneID" > !{mappingFile}
-        zcat !{transcriptsFile} | \
+        echo -e "TxID\tGeneID" > "!{mappingFile}"
+        zcat "!{transcriptsFile}" | \
             egrep '^>' | \
             cut -d '|' -f 1,2 | \
             sed -e 's/>//' -e 's/\\.[0-9]*\$//' | \
             tr '|' '\t' \
-            >> !{mappingFile}
+            >> "!{mappingFile}"
         """
 }
 
 workflow salmonWF
 {
     take:
-        fastaChannel
+        fastaChannel: Channel<Record>
 
     main:
         def kmers = [ 17, 23, 31 ]
         kmerChannel = channel.fromList(kmers)
 
-        // fastaChannel carries records; extract fields for the tuple-based internal processes.
         processingChannel = fastaChannel
-            .filter \
-            {
-                r ->
+            .map { r ->
+                record(genomeInfo: r.genomeInfo, genomeFile: r.fastaFile)
+            }
+            .filter { r ->
+                r.genomeInfo['url.transcripts.fasta'] != null
+            }
+            .filter { r ->
                 def salmonDir = "${assemblyPath(r.genomeInfo)}/salmon-${params.SALMON_VERSION}"
                 def requiredFiles = kmers.collect { k -> file("${salmonDir}/k${k}/pos.bin") }
                 requiredFiles << file("${salmonDir}/tx2gene.tsv")
-                return requiredFiles.any { !it.exists() }
+                return requiredFiles.any { f -> !f.exists() }
             }
-            .map { r -> tuple r.genomeInfo, r.fastaFile }
 
-        fetchTranscripts(processingChannel) | installTranscripts | indexTranscripts
+        sourceTranscripts = fetchTranscripts(processingChannel)
+        installedTranscripts = installTranscripts(sourceTranscripts)
+        indexTranscripts(installedTranscripts)
 
-        createDecoys(fetchTranscripts.out)
+        decoys = createDecoys(sourceTranscripts)
 
-        combineChannel = installTranscripts.out.map \
-        {
-            genomeInfo, genomeFile, transcriptsFile ->
-            tuple genomeInfo, [ transcriptsFile, genomeFile ]
+        combineChannel = installedTranscripts.map { r ->
+            record(genomeInfo: r.genomeInfo, inputFiles: [ r.transcriptsFile, r.genomeFile ])
         }
 
-        combineGenomeAndTranscripts(combineChannel)
+        combined = combineGenomeAndTranscripts(combineChannel)
 
-        fastaById = combineGenomeAndTranscripts.out.map { genomeInfo, fastaFile -> tuple genomeInfo.base, genomeInfo, fastaFile }
-        decoysById = createDecoys.out.map { genomeInfo, decoysFile -> tuple genomeInfo.base, decoysFile }
+        fastaById = combined.map { r ->
+            record(id: r.genomeInfo.base, fasta: record(genomeInfo: r.genomeInfo, fastaFile: r.outputFile))
+        }
 
-        transcriptAndDecoysChannel = fastaById.combine(decoysById, by: 0).map { id, genomeInfo, fastaFile, decoysFile -> tuple genomeInfo, fastaFile, decoysFile }
+        decoysById = decoys.map { r ->
+            record(id: r.genomeInfo.base, decoys: r.decoysFile)
+        }
 
-        indexingChannel = transcriptAndDecoysChannel
+        indexingChannel = fastaById
+            .join(decoysById, by: 'id')
             .combine(kmerChannel)
-            .filter \
-            {
-                genomeInfo, fastaFile, decoysFile, kmer ->
-                def salmonDir = "${assemblyPath(genomeInfo)}/salmon-${params.SALMON_VERSION}"
-                return !file("${salmonDir}/k${kmer}/pos.bin").exists()
+            .map { r, k ->
+                record(genomeInfo: r.fasta.genomeInfo, fastaFile: r.fasta.fastaFile, decoysFile: r.decoys, kmer: k)
+            }
+            .filter { r ->
+                def salmonDir = "${assemblyPath(r.genomeInfo)}/salmon-${params.SALMON_VERSION}"
+                return !file("${salmonDir}/k${r.kmer}/pos.bin").exists()
             }
 
         salmonIndex(indexingChannel)
 
-        transcriptToGeneChannel = fetchTranscripts.out
-            .filter \
-            {
-                genomeInfo, genomeFile, transcriptsFile ->
-                def salmonDir = "${assemblyPath(genomeInfo)}/salmon-${params.SALMON_VERSION}"
+        transcriptToGeneChannel = sourceTranscripts
+            .filter { r ->
+                def salmonDir = "${assemblyPath(r.genomeInfo)}/salmon-${params.SALMON_VERSION}"
                 return !file("${salmonDir}/tx2gene.tsv").exists()
             }
 

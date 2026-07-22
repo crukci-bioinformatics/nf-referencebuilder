@@ -1,18 +1,18 @@
+nextflow.enable.types = true
+
+include { assemblyPath } from '../functions'
+
 process starIndexWithGTF
 {
-    time = '12h'
-    cpus = 8
+    label 'STAR'
 
-    memory = { 45.GB * 2 ** (task.attempt - 1) } // So 45, 90, 180
-    maxRetries = 2
-
-    publishDir "${assemblyPath(genomeInfo)}", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(fastaFile), path(gtfFile)
+        record(genomeInfo: Properties, fastaFile: Path, gtfFile: Path)
 
     output:
-        tuple val(genomeInfo), path(indexDir)
+        record(genomeInfo: genomeInfo, indexDir: file(indexDir))
 
     shell:
         indexDir = "star-${params.STAR_VERSION}"
@@ -23,19 +23,15 @@ process starIndexWithGTF
 
 process starIndexNoGTF
 {
-    time = '12h'
-    cpus = 8
+    label 'STAR'
 
-    memory = { 45.GB * 2 ** (task.attempt - 1) }
-    maxRetries = 2
-
-    publishDir "${assemblyPath(genomeInfo)}", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(fastaFile), val(nothing)
+        record(genomeInfo: Properties, fastaFile: Path, gtfFile: Path?)
 
     output:
-        tuple val(genomeInfo), path(indexDir)
+        record(genomeInfo: genomeInfo, indexDir: file(indexDir))
 
     shell:
         indexDir = "star-${params.STAR_VERSION}"
@@ -44,45 +40,41 @@ process starIndexNoGTF
         template 'star/starIndexNoGTF.sh'
 }
 
+def processingCondition(genomeInfo: Properties)
+{
+    def starDir = "${assemblyPath(genomeInfo)}/star-${params.STAR_VERSION}"
+    def requiredFiles = [ file("${starDir}/SA"), file("${starDir}/SAindex"), file("${starDir}/Genome") ]
+    return requiredFiles.any { f -> !f.exists() }
+}
+
 workflow starWF
 {
     take:
-        fastaChannel
-        gtfChannel
+        fastaChannel: Channel<Record>
+        gtfChannel: Channel<Record>
 
     main:
         // Combine the channels. Use the genome info 'base' as the key.
         // fastaChannel and gtfChannel now carry records; extract fields for joining.
-        info2Channel = fastaChannel.map { r -> tuple r.genomeInfo.base, r.genomeInfo }
-        fasta2Channel = fastaChannel.map { r -> tuple r.genomeInfo.base, r.fastaFile }
-        gtf2Channel = gtfChannel.map { r -> tuple r.genomeInfo.base, r.gtfFile }
+        info2Channel = fastaChannel.map { r -> record(id: r.genomeInfo.base, genomeInfo: r.genomeInfo) }
+        fasta2Channel = fastaChannel.map { r -> record(id: r.genomeInfo.base, fastaFile: r.fastaFile) }
+        gtf2Channel = gtfChannel.map { r -> record(id: r.genomeInfo.base, gtfFile: r.gtfFile) }
 
-        def gtfCondition =
-        {
-            genomeInfo, fastaFile, gtfFile ->
-            return gtfFile != null
-        }
-
-        starInputChoice =
-            info2Channel
-            .join(fasta2Channel)
-            .join(gtf2Channel, remainder: true)
-            .map { base, genomeInfo, fastaFile, gtfFile -> tuple genomeInfo, fastaFile, gtfFile }
-            .branch \
-            {
-                GTF:   gtfCondition(it)
-                noGTF: true
+        combinedChannel = info2Channel
+            .join(fasta2Channel, by: 'id')
+            .join(gtf2Channel, by: 'id', remainder: true)
+            .map { r ->
+                record(genomeInfo: r.genomeInfo, fastaFile: r.fastaFile, gtfFile: r.gtfFile)
             }
 
-        def processingCondition =
-        {
-            genomeInfo, fastaFile, gtfFile ->
-            def starDir = "${assemblyPath(genomeInfo)}/star-${params.STAR_VERSION}"
-            def requiredFiles = [ file("${starDir}/SA"), file("${starDir}/SAindex"), file("${starDir}/Genome") ]
-            return requiredFiles.any { !it.exists() }
+        withGTFChannel = combinedChannel.filter { r ->
+            r.gtfFile != null && processingCondition(r.genomeInfo)
         }
 
-        starIndexWithGTF(starInputChoice.GTF.filter { processingCondition(it) })
+        withoutGTFChannel = combinedChannel.filter { r ->
+            r.gtfFile == null && processingCondition(r.genomeInfo)
+        }
 
-        starIndexNoGTF(starInputChoice.noGTF.filter { processingCondition(it) })
+        starIndexWithGTF(withGTFChannel)
+        starIndexNoGTF(withoutGTFChannel)
 }

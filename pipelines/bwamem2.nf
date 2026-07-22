@@ -1,14 +1,18 @@
+nextflow.enable.types = true
+
+include { assemblyPath } from '../functions'
+
 process bwamem2Index
 {
     label 'builder'
 
-    publishDir "${assemblyPath(genomeInfo)}", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}" }, mode: 'copy'
 
     input:
         record(genomeInfo: Map, fastaFile: Path)
 
     output:
-        tuple val(genomeInfo), path(indexDir)
+        record(genomeInfo: genomeInfo, indexDir: file(indexDir))
 
     shell:
         indexDir = "bwamem2-${params.BWAMEM2_VERSION}"
@@ -26,17 +30,16 @@ process bwamem2Index
 workflow bwamem2WF
 {
     take:
-        fastaChannel
+        fastaChannel: Channel<Record>
 
     main:
-        processingChannel = fastaChannel
-            .filter \
-            {
-                r ->
-                def bwamemBase = "${assemblyPath(r.genomeInfo)}/bwamem2-${params.BWAMEM2_VERSION}/${r.genomeInfo.base}"
-                def requiredFiles = [ file("${bwamemBase}.0123"), file("${bwamemBase}.bwt.2bit.64"), file("${bwamemBase}.pac") ]
-                return requiredFiles.any { !it.exists() }
-            }
+        processingChannel = fastaChannel.filter \
+        {
+            r ->
+            def bwamemBase = "${assemblyPath(r.genomeInfo)}/bwamem2-${params.BWAMEM2_VERSION}/${r.genomeInfo.base}"
+            def requiredFiles = [ file("${bwamemBase}.0123"), file("${bwamemBase}.bwt.2bit.64"), file("${bwamemBase}.pac") ]
+            return requiredFiles.any { f -> !f.exists() }
+        }
 
         bwamem2Index(processingChannel)
 }
