@@ -15,12 +15,13 @@ count = 0
 for line in sys.stdin:
   flds = line.strip().split("\t")
   if len(flds) != 12:
-    sys.stderr.write("Bug: %d columns in line".format(count,))
+    sys.stderr.write(f"Bug: {count} columns in line")
     sys.exit(-1)
   if flds[GENE_ID_COL] == "":
     tag = flds[TRANSCRIPT_ID_COL]
   else:
     tag = flds[GENE_ID_COL]
-  sys.stdout.write("%s\t%s\n".format(tag,"\t".join(flds[0:10])))
+  fieldText = "\t".join(flds[0:10])
+  sys.stdout.write(f"{tag}\t{fieldText}\n")
   count += 1
-sys.stderr.write("translated %d lines\n".format(count,))
+sys.stderr.write(f"translated {count} lines\n")

@@ -9,19 +9,18 @@ import requests
 
 def main(martname):
 
-    urlTemplate = \
+    exampleURL = \
         '''http://www.ensembl.org/biomart/martservice?query=''' \
         '''<?xml version="1.0" encoding="UTF-8"?>''' \
         '''<!DOCTYPE Query>''' \
         '''<Query virtualSchemaName="default" formatter="TSV" header="0" uniqueRows="1" count="" datasetConfigVersion="0.6">''' \
-        '''<Dataset name="%s_gene_ensembl" interface="default">''' \
+        f'''<Dataset name="{martname}_gene_ensembl" interface="default">''' \
         '''<Attribute name="ensembl_gene_id"/>''' \
         '''<Attribute name="external_gene_name"/>''' \
         '''<Attribute name="description"/>''' \
         '''</Dataset>''' \
         '''</Query>'''
 
-    exampleURL = urlTemplate % (martname)
     req = requests.get(exampleURL, stream=True)
     for line in req.iter_lines():
         print(line)

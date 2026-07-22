@@ -17,7 +17,7 @@ count = 0
 for line in sys.stdin:
   flds = line.strip().split("\t")
   if len(flds) != 16:
-    sys.stderr.write("Bug: %d columns in line".format(count,))
+    sys.stderr.write(f"Bug: {count} columns in line")
     sys.exit(-1)
     # if GENE_ID_COL field is empty,
     # then 'tag' takes value from GENE_ID_COL field
@@ -32,6 +32,7 @@ for line in sys.stdin:
     #print("Length of array:", len(flds))
     flds.pop(0)
     #print("Length of array:", len(flds))
-  sys.stdout.write("%s\t%s\n".format(tag,"\t".join(flds[0:10])))
+  fieldText = "\t".join(flds[0:10])
+  sys.stdout.write(f"{tag}\t{fieldText}\n")
   count += 1
-sys.stderr.write("translated %d lines\n".format(count,))
+sys.stderr.write(f"translated {count} lines\n")

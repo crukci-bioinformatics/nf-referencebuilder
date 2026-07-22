@@ -14,9 +14,7 @@ include { bwamem2WF } from './pipelines/bwamem2'
 include { bowtie2WF } from './pipelines/bowtie2'
 include { starWF } from './pipelines/star'
 include { salmonWF } from './pipelines/salmon'
-/*
 include { effectiveGenomeSizesWF } from './pipelines/effectiveSizes'
-*/
 
 workflow
 {
@@ -36,7 +34,5 @@ workflow
     bowtie2WF(fastaOut.fastaChannel)
     starWF(fastaOut.fastaChannel, annotationOut.gtfChannel)
     salmonWF(fastaOut.fastaChannel)
-    /*
-    effectiveGenomeSizesWF(fastaWF.out.canonicalChannel)
-    */
+    effectiveGenomeSizesWF(fastaOut.canonicalChannel)
 }
