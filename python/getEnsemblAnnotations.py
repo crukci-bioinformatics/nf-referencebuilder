@@ -24,7 +24,7 @@ def main(martname):
     exampleURL = urlTemplate % (martname)
     req = requests.get(exampleURL, stream=True)
     for line in req.iter_lines():
-        print line
+        print(line)
 
 if __name__ == '__main__':
     main(sys.argv[1])

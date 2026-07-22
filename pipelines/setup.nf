@@ -1,3 +1,5 @@
+nextflow.enable.types = true
+
 /*
     Need a .hg.conf file in the home directory to access UCSC databases.
     This file must be private to the user.
@@ -9,39 +11,40 @@ process createHgConf
     label 'tiny'
     tag 'home'
 
-    publishDir "${System.getProperty('user.home')}", mode: 'copy'
+    publishDir { file(homeConfFile.parent.toString()) }, mode: 'copy'
 
     input:
-        path homeConfFile
+        homeConfFile: Path
 
     output:
-        path hgConfFile
+        hgConfFile: Path = file(confFileName)
 
     shell:
-        hgConfFile = ".hg.conf"
+        confFileName = homeConfFile.name
 
         """
-            echo "db.host=genome-mysql.cse.ucsc.edu" > !{hgConfFile}
-            echo "db.user=genomep" >> !{hgConfFile}
-            echo "db.password=password" >> !{hgConfFile}
-            echo "central.db=hgcentral" >> !{hgConfFile}
-            chmod 600 !{hgConfFile}
+            echo "db.host=genome-mysql.cse.ucsc.edu" > !{confFileName}
+            echo "db.user=genomep" >> !{confFileName}
+            echo "db.password=password" >> !{confFileName}
+            echo "central.db=hgcentral" >> !{confFileName}
+            chmod 600 !{confFileName}
         """
 }
 
 workflow setupWF
 {
     main:
-        presentChoice = channel.fromPath("${System.getProperty('user.home')}/.hg.conf").branch
+        presentChoice = channel.fromPath("${System.getProperty('user.home')}/.hg.conf").branch \
         {
-            present: it.exists()
+            confFile ->
+            present: confFile.exists()
             needed: true
         }
 
-        createHgConf(presentChoice.needed)
+        newlyCreated = createHgConf(presentChoice.needed)
 
-        hgConfChannel = presentChoice.present.mix(createHgConf.out)
+        newOrNot = presentChoice.present.mix(newlyCreated)
 
     emit:
-        hgConfChannel
+        hgConfChannel: Channel<Path> = newOrNot
 }

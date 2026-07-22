@@ -4,9 +4,6 @@
  * See https://redmine-bioinformatics.cruk.cam.ac.uk/issues/7243
  */
 
-include { assemblyPath } from '../functions/functions'
-include { javaMemMB } from '../modules/nextflow-support/functions'
-
 process fetchTranscripts
 {
     label 'tiny'
@@ -167,21 +164,23 @@ workflow salmonWF
         def kmers = [ 17, 23, 31 ]
         kmerChannel = channel.fromList(kmers)
 
+        // fastaChannel carries records; extract fields for the tuple-based internal processes.
         processingChannel = fastaChannel
-            .filter
+            .filter \
             {
-                genomeInfo, fastaFile ->
-                def salmonDir = "${assemblyPath(genomeInfo)}/salmon-${params.SALMON_VERSION}"
+                r ->
+                def salmonDir = "${assemblyPath(r.genomeInfo)}/salmon-${params.SALMON_VERSION}"
                 def requiredFiles = kmers.collect { k -> file("${salmonDir}/k${k}/pos.bin") }
                 requiredFiles << file("${salmonDir}/tx2gene.tsv")
                 return requiredFiles.any { !it.exists() }
             }
+            .map { r -> tuple r.genomeInfo, r.fastaFile }
 
         fetchTranscripts(processingChannel) | installTranscripts | indexTranscripts
 
         createDecoys(fetchTranscripts.out)
 
-        combineChannel = installTranscripts.out.map
+        combineChannel = installTranscripts.out.map \
         {
             genomeInfo, genomeFile, transcriptsFile ->
             tuple genomeInfo, [ transcriptsFile, genomeFile ]
@@ -196,7 +195,7 @@ workflow salmonWF
 
         indexingChannel = transcriptAndDecoysChannel
             .combine(kmerChannel)
-            .filter
+            .filter \
             {
                 genomeInfo, fastaFile, decoysFile, kmer ->
                 def salmonDir = "${assemblyPath(genomeInfo)}/salmon-${params.SALMON_VERSION}"
@@ -206,7 +205,7 @@ workflow salmonWF
         salmonIndex(indexingChannel)
 
         transcriptToGeneChannel = fetchTranscripts.out
-            .filter
+            .filter \
             {
                 genomeInfo, genomeFile, transcriptsFile ->
                 def salmonDir = "${assemblyPath(genomeInfo)}/salmon-${params.SALMON_VERSION}"

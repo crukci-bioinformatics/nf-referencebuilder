@@ -5,5 +5,5 @@
 set -euo pipefail
 
 genePredToGtf \
-    !{database} !{table} \
-    !{gtfFile}
+    "!{database}" "!{table}" \
+    "!{gtfFile}"

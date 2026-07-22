@@ -1,6 +1,3 @@
-include { assemblyPath } from '../functions/functions'
-include { javaMemMB } from '../modules/nextflow-support/functions'
-
 def calculateEffectiveGenomeSize(genomeInfo, jellyfishStatsFile, readLength, genomeLength)
 {
     def uniqueMerCount = 0L
@@ -118,12 +115,9 @@ workflow effectiveGenomeSizesWF
         def readLengths = [ 36, 50, 75, 100, 125, 150 ]
         readLengthsChannel = channel.fromList(readLengths)
 
+        // canonicalChannel carries records; extract fields for the tuple-based internal processes.
         def contigChannel = canonicalChannel
-            .map
-            {
-                genomeInfo, fastaFile, canonicalFile ->
-                tuple genomeInfo, fastaFile, canonicalFile.readLines()
-            }
+            .map { r -> tuple r.genomeInfo, r.fastaFile, r.canonicalFile.readLines() }
 
         def processingCondition1 =
         {
@@ -133,7 +127,7 @@ workflow effectiveGenomeSizesWF
             return requiredFiles.any { !it.exists() }
         }
 
-        processingChoice1 = contigChannel.branch
+        processingChoice1 = contigChannel.branch \
         {
             doIt: processingCondition1(it)
             done: true
@@ -142,7 +136,7 @@ workflow effectiveGenomeSizesWF
         createCanonicalFasta(processingChoice1.doIt)
 
         jellyfishChannel = createCanonicalFasta.out
-            .map
+            .map \
             {
                 genomeInfo, canonicalFasta, canonicalIndex ->
                 // Take the second column from the index and sum the size of the contigs.
@@ -157,7 +151,7 @@ workflow effectiveGenomeSizesWF
             return !file("${annotationBase}.effectivegenome.${readLength}.txt").exists()
         }
 
-        processingChoice2 = jellyfishChannel.branch
+        processingChoice2 = jellyfishChannel.branch \
         {
             doIt: processingCondition2(it)
             done: true
@@ -166,11 +160,11 @@ workflow effectiveGenomeSizesWF
         jellyfishCount(processingChoice2.doIt) | jellyfishStats
 
         jellyfishNumberChannel = jellyfishStats.out
-            .map
+            .map \
             {
                 genomeInfo, statsFile, readLength, genomeLength ->
                 tuple genomeInfo, calculateEffectiveGenomeSize(genomeInfo, statsFile, readLength, genomeLength)
             }
 
-         effectiveGenomeSize(jellyfishNumberChannel)
+        effectiveGenomeSize(jellyfishNumberChannel)
 }

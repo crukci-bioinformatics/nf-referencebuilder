@@ -1,3 +1,8 @@
+nextflow.enable.types = true
+
+include { javaMemoryOptions } from 'plugin/nf-crukci-support'
+include { assemblyPath } from '../functions'
+
 /*
     Pipeline to fetch and process FASTA reference sequence.
 
@@ -9,25 +14,21 @@
     "recreateFasta" task descriptor for more information.
 */
 
-include { assemblyPath } from '../functions/functions'
-include { maxReadsInRam } from '../functions/picard'
-include { javaMemMB } from '../modules/nextflow-support/functions'
-
 process fetchFasta
 {
     label 'fetcher'
 
     input:
-        val(genomeInfo)
+        genomeInfo: Properties
 
     output:
-        tuple val(genomeInfo), path(fastaFile)
+        record(genomeInfo: genomeInfo, fastaFile: file(fastaFile))
 
     shell:
         fastaFile = "downloaded.fa.gz"
 
         """
-        wget -O !{fastaFile} "!{genomeInfo['url.fasta']}"
+        wget !{params.wgetOptions} -O !{fastaFile} "!{genomeInfo['url.fasta']}"
         """
 }
 
@@ -44,16 +45,16 @@ process recreateFasta
 {
     label 'assembler'
 
-    publishDir "${assemblyPath(genomeInfo)}/fasta", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}/fasta" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(fastaFile)
+        record(genomeInfo: Properties, fastaFile: Path)
 
     output:
-        tuple val(genomeInfo), path(correctedFile)
+        record(genomeInfo: genomeInfo, fastaFile: file(correctedFile))
 
     shell:
-        javaMem = javaMemMB(task)
+        javaMem = javaMemoryOptions(task).jvmOpts
         correctedFile = "${genomeInfo.base}.fa"
 
         template "fasta/RecreateFasta.sh"
@@ -61,13 +62,13 @@ process recreateFasta
 
 process indexFasta
 {
-    publishDir "${assemblyPath(genomeInfo)}/fasta", mode: 'copy', pattern: '*.fai'
+    publishDir { "${assemblyPath(genomeInfo)}/fasta" }, mode: 'copy', pattern: '*.fai'
 
     input:
-        tuple val(genomeInfo), path(fastaFile)
+        record(genomeInfo: Properties, fastaFile: Path)
 
     output:
-        tuple val(genomeInfo), path(fastaFile), path(indexFile)
+        record(genomeInfo: genomeInfo, fastaFile: fastaFile, indexFile: file(indexFile))
 
     shell:
         indexFile = fastaFile.name + ".fai"
@@ -85,16 +86,16 @@ process sequenceDictionary
 {
     label 'picard'
 
-    publishDir "${assemblyPath(genomeInfo)}/fasta", mode: 'copy', pattern: '*.dict'
+    publishDir { "${assemblyPath(genomeInfo)}/fasta" }, mode: 'copy', pattern: '*.dict'
 
     input:
-        tuple val(genomeInfo), path(fastaFile)
+        record(genomeInfo: Properties, fastaFile: Path)
 
     output:
-        tuple val(genomeInfo), path(fastaFile), path(sequenceDictionary)
+        record(genomeInfo: genomeInfo, fastaFile: fastaFile, sequenceDictionary: file(sequenceDictionary))
 
     shell:
-        javaMem = javaMemMB(task)
+        javaMem = javaMemoryOptions(task).jvmOpts
         sequenceDictionary = "${genomeInfo.base}.dict"
 
         template "picard/CreateSequenceDictionary.sh"
@@ -107,13 +108,13 @@ process sizesFile
 {
     label 'tiny'
 
-    publishDir "${assemblyPath(genomeInfo)}/fasta", mode: 'copy', pattern: '*.sizes'
+    publishDir { "${assemblyPath(genomeInfo)}/fasta" }, mode: 'copy', pattern: '*.sizes'
 
     input:
-        tuple val(genomeInfo), path(fastaFile), path(sequenceDictionary)
+        record(genomeInfo: Properties, fastaFile: Path, sequenceDictionary: Path)
 
     output:
-        tuple val(genomeInfo), path(fastaFile), path(sizesFile)
+        record(genomeInfo: genomeInfo, fastaFile: fastaFile, sizesFile: file(sizesFile))
 
     shell:
         sizesFile = "${genomeInfo.base}.sizes"
@@ -140,13 +141,13 @@ process canonicalChromosomes
 {
     label 'tiny'
 
-    publishDir "${assemblyPath(genomeInfo)}/fasta", mode: 'copy', pattern: '*.canonical'
+    publishDir { "${assemblyPath(genomeInfo)}/fasta" }, mode: 'copy', pattern: '*.canonical'
 
     input:
-        tuple val(genomeInfo), path(fastaFile), path(sizesFile)
+        record(genomeInfo: Properties, fastaFile: Path, sizesFile: Path)
 
     output:
-        tuple val(genomeInfo), path(fastaFile), path(canonicalFile)
+        record(genomeInfo: genomeInfo, fastaFile: fastaFile, canonicalFile: file(canonicalFile))
 
     shell:
         canonicalFile = "${genomeInfo.base}.canonical"
@@ -160,57 +161,64 @@ process canonicalChromosomes
         """
 }
 
+/*
+ * Work flow and supporting functions.
+ */
+
+def processingCondition(genomeInfo: Properties)
+{
+    def fastaBase = "${assemblyPath(genomeInfo)}/fasta/${genomeInfo.base}"
+    def requiredFiles = [
+        file("${fastaBase}.fa"),
+        file("${fastaBase}.fa.fai"),
+        file("${fastaBase}.dict"),
+        file("${fastaBase}.sizes"),
+        file("${fastaBase}.canonical")
+    ]
+    return requiredFiles.any { f -> !f.exists() }
+}
+
 workflow fastaWF
 {
     take:
-        genomeInfoChannel
+        genomeInfoChannel: Channel<Properties>
 
     main:
-
-        def processingCondition =
+        processingChoice = genomeInfoChannel.branch \
         {
             genomeInfo ->
-            def fastaBase = "${assemblyPath(genomeInfo)}/fasta/${genomeInfo.base}"
-            def requiredFiles = [
-                file("${fastaBase}.fa"),
-                file("${fastaBase}.fa.fai"),
-                file("${fastaBase}.dict"),
-                file("${fastaBase}.sizes"),
-                file("${fastaBase}.canonical")
-            ]
-            return requiredFiles.any { !it.exists() }
-        }
-
-        processingChoice = genomeInfoChannel.branch
-        {
-            doIt: processingCondition(it)
+            doIt: processingCondition(genomeInfo)
             done: true
         }
 
-        fetchFasta(processingChoice.doIt) | recreateFasta
+        sourceFasta = fetchFasta(processingChoice.doIt)
 
-        indexFasta(recreateFasta.out)
+        recreatedFasta = recreateFasta(sourceFasta)
 
-        sequenceDictionary(recreateFasta.out) | sizesFile | canonicalChromosomes
+        indexFasta(recreatedFasta)
 
-        fastaPresentChannel = processingChoice.done.map
+        withSD = sequenceDictionary(recreatedFasta)
+        withSizes = sizesFile(withSD)
+        withCanonical = canonicalChromosomes(withSizes)
+
+        fastaAlreadyPresent = processingChoice.done.map \
         {
             genomeInfo ->
-            tuple genomeInfo, file("${assemblyPath(genomeInfo)}/fasta/${genomeInfo.base}.fa")
+            record(genomeInfo: genomeInfo, fastaFile: file("${assemblyPath(genomeInfo)}/fasta/${genomeInfo.base}.fa"))
         }
 
-        fastaChannel = fastaPresentChannel.mix(recreateFasta.out)
+        fastaChannel = fastaAlreadyPresent.mix(recreatedFasta)
 
-        canonicalPresentChannel = processingChoice.done.map
+        canonicalAlreadyPresent = processingChoice.done.map \
         {
             genomeInfo ->
             def fastaBase = "${assemblyPath(genomeInfo)}/fasta/${genomeInfo.base}"
-            tuple genomeInfo, file("${fastaBase}.fa"), file("${fastaBase}.canonical")
+            record(genomeInfo: genomeInfo, fastaFile: file("${fastaBase}.fa"), canonicalFile: file("${fastaBase}.canonical"))
         }
 
-        canonicalChannel = canonicalPresentChannel.mix(canonicalChromosomes.out)
+        canonicalChannel = canonicalAlreadyPresent.mix(withCanonical)
 
     emit:
-        fastaChannel
-        canonicalChannel
+        fastaChannel: Channel<Record> = fastaChannel
+        canonicalChannel: Channel<Record> = canonicalChannel
 }

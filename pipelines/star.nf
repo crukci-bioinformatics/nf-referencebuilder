@@ -1,5 +1,3 @@
-include { assemblyPath } from '../functions/functions'
-
 process starIndexWithGTF
 {
     time = '12h'
@@ -54,9 +52,10 @@ workflow starWF
 
     main:
         // Combine the channels. Use the genome info 'base' as the key.
-        info2Channel = fastaChannel.map { info, fasta -> tuple info.base, info }
-        fasta2Channel = fastaChannel.map { info, fasta -> tuple info.base, fasta }
-        gtf2Channel = gtfChannel.map { info, gtf -> tuple info.base, gtf }
+        // fastaChannel and gtfChannel now carry records; extract fields for joining.
+        info2Channel = fastaChannel.map { r -> tuple r.genomeInfo.base, r.genomeInfo }
+        fasta2Channel = fastaChannel.map { r -> tuple r.genomeInfo.base, r.fastaFile }
+        gtf2Channel = gtfChannel.map { r -> tuple r.genomeInfo.base, r.gtfFile }
 
         def gtfCondition =
         {
@@ -68,12 +67,8 @@ workflow starWF
             info2Channel
             .join(fasta2Channel)
             .join(gtf2Channel, remainder: true)
-            .map
-            {
-                base, genomeInfo, fastaFile, gtfFile ->
-                tuple genomeInfo, fastaFile, gtfFile
-            }
-            .branch
+            .map { base, genomeInfo, fastaFile, gtfFile -> tuple genomeInfo, fastaFile, gtfFile }
+            .branch \
             {
                 GTF:   gtfCondition(it)
                 noGTF: true

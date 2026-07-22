@@ -1,5 +1,3 @@
-include { assemblyPath } from '../functions/functions'
-
 /*
  * Function to test whether the Bowtie2 indexes exist. This is complicated
  * by the possibility that the suffix can be "bt2" or "bt2l".
@@ -24,7 +22,7 @@ process bowtie2Index
     publishDir "${assemblyPath(genomeInfo)}", mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(fastaFile)
+        record(genomeInfo: Map, fastaFile: Path)
 
     output:
         tuple val(genomeInfo), path(indexDir)
@@ -48,10 +46,10 @@ workflow bowtie2WF
 
     main:
         processingChannel = fastaChannel
-            .filter
+            .filter \
             {
-                genomeInfo, fastaFile ->
-                return !bowtie2Exists("${assemblyPath(genomeInfo)}/bowtie2-${params.BOWTIE2_VERSION}/${genomeInfo.base}")
+                r ->
+                return !bowtie2Exists("${assemblyPath(r.genomeInfo)}/bowtie2-${params.BOWTIE2_VERSION}/${r.genomeInfo.base}")
             }
 
         bowtie2Index(processingChannel)

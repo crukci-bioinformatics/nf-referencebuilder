@@ -1,3 +1,8 @@
+nextflow.enable.types = true
+
+include { javaMemoryOptions } from 'plugin/nf-crukci-support'
+include { assemblyPath } from '../functions'
+
 /*
     Pipeline to fetch and prepare annotation files.
 
@@ -5,9 +10,6 @@
     and produces both a GTF file and a RefFlat file for annotation regardless of
     the source format.
 */
-
-include { assemblyPath } from '../functions/functions'
-include { javaMemMB } from '../modules/nextflow-support/functions'
 
 /*
  * Processes where the annotation source is GTF.
@@ -18,44 +20,45 @@ process fetchGtf
     label 'fetcher'
 
     input:
-        val(genomeInfo)
+        genomeInfo: Properties
 
     output:
-        tuple val(genomeInfo), path(gtfFile)
+        record(genomeInfo: genomeInfo, gtfFile: file(gtfFile))
 
     shell:
         gtfFile = "downloaded.gtf"
 
         """
-        wget -O !{gtfFile} "!{genomeInfo['url.gtf']}"
+        wget !{params.wgetOptions} -O !{gtfFile} "!{genomeInfo['url.gtf']}"
         """
 }
 
 process expandGtf
 {
-    publishDir "${assemblyPath(genomeInfo)}/annotation", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}/annotation" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(inputFiles)
+        record(genomeInfo: Properties, gtfFile: Path)
 
     output:
-        tuple val(genomeInfo), path(outputFile)
+        record(genomeInfo: genomeInfo, gtfFile: file(outputFile))
 
     shell:
-        javaMem = javaMemMB(task)
+        javaMem = javaMemoryOptions(task).jvmOpts
+        inputFiles = [ gtfFile ]
         outputFile = "${genomeInfo.base}.gtf"
         template "ConcatenateFiles.sh"
 }
 
 process refFlatFromGTF
 {
-    publishDir "${assemblyPath(genomeInfo)}/annotation", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}/annotation" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(gtfFile)
+        record(genomeInfo: Properties, gtfFile: Path)
 
     output:
-        tuple val(genomeInfo), path(refFlatFile)
+        record(genomeInfo: genomeInfo, refFlatFile: file(refFlatFile))
 
     shell:
         refFlatFile = "${genomeInfo.base}.txt"
@@ -71,43 +74,44 @@ process fetchKnownGene
     label 'fetcher'
 
     input:
-        val(genomeInfo)
+        genomeInfo: Properties
 
     output:
-        tuple val(genomeInfo), path(knownGeneFile)
+        record(genomeInfo: genomeInfo, knownGeneFile: file(knownGeneFile))
 
     shell:
         knownGeneFile = "downloaded.knowngene.txt"
 
         """
-        wget -O !{knownGeneFile} "!{genomeInfo['url.knowngene']}"
+        wget !{params.wgetOptions} -O !{knownGeneFile} "!{genomeInfo['url.knowngene']}"
         """
 }
 
 process expandKnownGene
 {
     input:
-        tuple val(genomeInfo), path(inputFiles)
+        record(genomeInfo: Properties, knownGeneFile: Path)
 
     output:
-        tuple val(genomeInfo), path(outputFile)
+        record(genomeInfo: genomeInfo, knownGeneFile: file(outputFile))
 
     shell:
-        javaMem = javaMemMB(task)
+        javaMem = javaMemoryOptions(task).jvmOpts
+        inputFiles = [ knownGeneFile ]
         outputFile = "knowngene.txt"
         template "ConcatenateFiles.sh"
 }
 
 process gtfFromKnownGene
 {
-    publishDir "${assemblyPath(genomeInfo)}/annotation", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}/annotation" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(knownGeneFile)
-        each path(hgConfChannel)
+        record(genomeInfo: Properties, knownGeneFile: Path)
+        hgConf: Path
 
     output:
-        tuple val(genomeInfo), path(gtfFile)
+        record(genomeInfo: genomeInfo, gtfFile: file(gtfFile))
 
     shell:
         gtfFile = "${genomeInfo.base}.gtf"
@@ -121,22 +125,22 @@ process gtfFromKnownGene
 
 process refFlatFromKnownGene
 {
-    publishDir "${assemblyPath(genomeInfo)}/annotation", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}/annotation" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(knownGeneFile)
+        record(genomeInfo: Properties, knownGeneFile: Path)
 
     output:
-        tuple val(genomeInfo), path(refFlatFile)
+        record(genomeInfo: genomeInfo, refFlatFile: file(refFlatFile))
 
     shell:
         refFlatFile = "${genomeInfo.base}.txt"
 
         """
-        python \
+        python3 \
             "!{projectDir}/python/knownGeneToRefFlat.py" \
-            < !{knownGeneFile} \
-            > !{refFlatFile}
+            < "!{knownGeneFile}" \
+            > "!{refFlatFile}"
         """
 }
 
@@ -149,43 +153,44 @@ process fetchEnsGene
     label 'fetcher'
 
     input:
-        val(genomeInfo)
+        genomeInfo: Properties
 
     output:
-        tuple val(genomeInfo), path(ensGeneFile)
+        record(genomeInfo: genomeInfo, ensGeneFile: file(ensGeneFile))
 
     shell:
         ensGeneFile = "downloaded.ensgene.txt"
 
         """
-        wget -O !{ensGeneFile} "!{genomeInfo['url.ensgene']}"
+        wget !{params.wgetOptions} -O !{ensGeneFile} "!{genomeInfo['url.ensgene']}"
         """
 }
 
 process expandEnsGene
 {
     input:
-        tuple val(genomeInfo), path(inputFiles)
+        record(genomeInfo: Properties, ensGeneFile: Path)
 
     output:
-        tuple val(genomeInfo), path(outputFile)
+        record(genomeInfo: genomeInfo, ensGeneFile: file(outputFile))
 
     shell:
-        javaMem = javaMemMB(task)
+        javaMem = javaMemoryOptions(task).jvmOpts
+        inputFiles = [ ensGeneFile ]
         outputFile = "ensgene.txt"
         template "ConcatenateFiles.sh"
 }
 
 process gtfFromEnsGene
 {
-    publishDir "${assemblyPath(genomeInfo)}/annotation", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}/annotation" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(ensGeneFile)
-        each path(hgConfChannel)
+        record(genomeInfo: Properties, ensGeneFile: Path)
+        hgConf: Path
 
     output:
-        tuple val(genomeInfo), path(gtfFile)
+        record(genomeInfo: genomeInfo, gtfFile: file(gtfFile))
 
     shell:
         gtfFile = "${genomeInfo.base}.gtf"
@@ -199,96 +204,106 @@ process gtfFromEnsGene
 
 process refFlatFromEnsGene
 {
-    publishDir "${assemblyPath(genomeInfo)}/annotation", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}/annotation" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(ensGeneFile)
+        record(genomeInfo: Properties, ensGeneFile: Path)
 
     output:
-        tuple val(genomeInfo), path(refFlatFile)
+        record(genomeInfo: genomeInfo, refFlatFile: file(refFlatFile))
 
     shell:
         refFlatFile = "${genomeInfo.base}.txt"
 
         """
-        python \
+        python3 \
             "!{projectDir}/python/ensGeneToRefFlat.py" \
-            < !{ensGeneFile} \
-            > !{refFlatFile}
+            < "!{ensGeneFile}" \
+            > "!{refFlatFile}"
         """
 }
 
+/*
+ * Work flow and supporting functions.
+ */
+
+def processingCondition(genomeInfo: Properties)
+{
+    def annotationBase = "${assemblyPath(genomeInfo)}/annotation/${genomeInfo.base}"
+    def requiredFiles = [ file("${annotationBase}.gtf"), file("${annotationBase}.txt") ]
+    return requiredFiles.any { f -> !f.exists() }
+}
+
+def whichFormatCondition(genomeInfo: Properties)
+{
+    if (genomeInfo['url.gtf'])
+        return 'gtf'
+
+    if (genomeInfo['url.knowngene'])
+        return 'knowngene'
+
+    if (genomeInfo['url.ensgene'])
+        return 'ensgene'
+
+    return 'none'
+}
 
 workflow annotationWF
 {
     take:
-        genomeInfoChannel
-        hgConfChannel
+        genomeInfoChannel: Channel<Properties>
+        hgConfChannel: Channel<Path>
 
     main:
-        def processingCondition =
+        processingChoice = genomeInfoChannel.branch \
         {
             genomeInfo ->
-            def annotationBase = "${assemblyPath(genomeInfo)}/annotation/${genomeInfo.base}"
-            def requiredFiles = [ file("${annotationBase}.gtf"), file("${annotationBase}.txt") ]
-            return requiredFiles.any { !it.exists() }
-        }
-
-        processingChoice = genomeInfoChannel.branch
-        {
-            doIt: processingCondition(it)
+            doIt: processingCondition(genomeInfo)
             done: true
         }
 
-        def whichFormatCondition =
+        sourceChoice = processingChoice.doIt.branch \
         {
             genomeInfo ->
-            if (genomeInfo['url.gtf'])
-                return 'gtf'
-
-            if (genomeInfo['url.knowngene'])
-                return 'knowngene'
-
-            if (genomeInfo['url.ensgene'])
-                return 'ensgene'
-
-            return 'none'
-        }
-
-        sourceChoice = processingChoice.doIt.branch
-        {
-            gtf: whichFormatCondition(it) == 'gtf'
-            knowngene: whichFormatCondition(it) == 'knowngene'
-            ensgene: whichFormatCondition(it) == 'ensgene'
+            gtf: whichFormatCondition(genomeInfo) == 'gtf'
+            knowngene: whichFormatCondition(genomeInfo) == 'knowngene'
+            ensgene: whichFormatCondition(genomeInfo) == 'ensgene'
             none: true
         }
 
-        fetchGtf(sourceChoice.gtf) | expandGtf | refFlatFromGTF
+        sourceGtf = fetchGtf(sourceChoice.gtf)
+        expandedGtf = expandGtf(sourceGtf)
+        refFlatGtf = refFlatFromGTF(expandedGtf)
 
-        fetchKnownGene(sourceChoice.knowngene) | expandKnownGene
-        gtfFromKnownGene(expandKnownGene.out, hgConfChannel)
-        refFlatFromKnownGene(expandKnownGene.out)
+        sourceKnownGene = fetchKnownGene(sourceChoice.knowngene)
+        expandedKnownGene = expandKnownGene(sourceKnownGene)
+        gtfKnownGene = gtfFromKnownGene(expandedKnownGene, hgConfChannel)
+        refFlatKnownGene = refFlatFromKnownGene(expandedKnownGene)
 
-        fetchEnsGene(sourceChoice.ensgene) | expandEnsGene
-        gtfFromEnsGene(expandEnsGene.out, hgConfChannel)
-        refFlatFromEnsGene(expandEnsGene.out)
+        sourceEnsGene = fetchEnsGene(sourceChoice.ensgene)
+        expandedEnsGene = expandEnsGene(sourceEnsGene)
+        gtfEnsGene = gtfFromEnsGene(expandedEnsGene, hgConfChannel)
+        refFlatEnsGene = refFlatFromEnsGene(expandedEnsGene)
 
-        gtfAlreadyHere = processingChoice.done.map
+        /*
+        gtfAlreadyHere = processingChoice.done.map \
         {
             genomeInfo ->
-            tuple genomeInfo, file("${assemblyPath(genomeInfo)}/annotation/${genomeInfo.base}.gtf")
+            record(genomeInfo: genomeInfo, gtfFile: file("${assemblyPath(genomeInfo)}/annotation/${genomeInfo.base}.gtf"))
         }
 
-        refFlatAlreadyHere = processingChoice.done.map
+        refFlatAlreadyHere = processingChoice.done.map \
         {
             genomeInfo ->
-            tuple genomeInfo, file("${assemblyPath(genomeInfo)}/annotation/${genomeInfo.base}.txt")
+            record(genomeInfo: genomeInfo, refFlatFile: file("${assemblyPath(genomeInfo)}/annotation/${genomeInfo.base}.txt"))
         }
 
-        gtfChannel = gtfAlreadyHere.mix(expandGtf.out).mix(gtfFromKnownGene.out).mix(gtfFromEnsGene.out)
-        refFlatChannel = refFlatAlreadyHere.mix(refFlatFromGTF.out).mix(refFlatFromKnownGene.out).mix(refFlatFromEnsGene.out)
+        gtfChannel = gtfAlreadyHere.mix(expandedGtf).mix(gtfKnownGene).mix(gtfEnsGene)
+
+        refFlatChannel = refFlatAlreadyHere.mix(refFlatGtf).mix(refFlatKnownGene).mix(refFlatEnsGene)
 
     emit:
-        gtfChannel = gtfChannel
-        refFlatChannel = refFlatChannel
+        gtfChannel: Channel<Record> = gtfChannel
+        refFlatChannel: Channel<Record> = refFlatChannel
+        */
 }

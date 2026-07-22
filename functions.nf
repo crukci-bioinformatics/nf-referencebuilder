@@ -2,15 +2,13 @@
  * Miscellaneous helper functions used all over the pipeline.
  */
 
-import static org.apache.commons.lang3.StringUtils.isNotEmpty
-
 /*
  * Read the properties from a properties file (i.e. the genome info file).
  */
-def readGenomeInfo(propsFile)
+def readGenomeInfo(propsFile: Path)
 {
     def genomeInfo = new Properties()
-    propsFile.withReader { genomeInfo.load(it) }
+    propsFile.withReader { reader -> genomeInfo.load(reader) }
 
     // Add some derived information for convenience.
 
@@ -18,7 +16,8 @@ def readGenomeInfo(propsFile)
     genomeInfo['base'] = genomeInfo['abbreviation'] + '.' + genomeInfo['version']
 
     def transcriptUrl = genomeInfo['url.transcripts.fasta']
-    genomeInfo['gencode'] = isNotEmpty(transcriptUrl) && transcriptUrl.contains("ftp.ebi.ac.uk/pub/databases/gencode");
+    genomeInfo['gencode'] = org.apache.commons.lang3.StringUtils.isNotEmpty(transcriptUrl) &&
+                            transcriptUrl.contains("ftp.ebi.ac.uk/pub/databases/gencode");
 
     return genomeInfo
 }

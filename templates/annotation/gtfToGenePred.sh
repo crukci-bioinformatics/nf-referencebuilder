@@ -6,10 +6,10 @@ set -euo pipefail
 
 gtfToGenePred \
     -infoOut=info.txt \
-    !{gtfFile} \
+    "!{gtfFile}" \
     refflat.txt
 
 paste \
     <(tail -n +2 info.txt | cut -f 2) \
     <(cut -f 1-10 refflat.txt) \
-    > !{refFlatFile}
+    > "!{refFlatFile}"

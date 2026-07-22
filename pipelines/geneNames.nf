@@ -5,9 +5,6 @@
     UCSC as XRef files.
 */
 
-include { assemblyPath } from '../functions/functions'
-include { javaMemMB } from '../modules/nextflow-support/functions'
-
 /*
  * Fetch gene names from BioMart.
  */
@@ -105,7 +102,7 @@ workflow geneNamesWF
 
     main:
         geneNamesChannel = genomeInfoChannel
-            .filter
+            .filter \
             {
                 genomeInfo ->
                 def annotationDir = "${assemblyPath(genomeInfo)}/annotation"
@@ -125,7 +122,7 @@ workflow geneNamesWF
             return 'none'
         }
 
-        sourceChoice = geneNamesChannel.branch
+        sourceChoice = geneNamesChannel.branch \
         {
             biomart: whichFormatCondition(it) == 'biomart'
             xref: whichFormatCondition(it) == 'xref'

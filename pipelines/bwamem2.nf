@@ -1,5 +1,3 @@
-include { assemblyPath } from '../functions/functions'
-
 process bwamem2Index
 {
     label 'builder'
@@ -7,7 +5,7 @@ process bwamem2Index
     publishDir "${assemblyPath(genomeInfo)}", mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(fastaFile)
+        record(genomeInfo: Map, fastaFile: Path)
 
     output:
         tuple val(genomeInfo), path(indexDir)
@@ -32,10 +30,10 @@ workflow bwamem2WF
 
     main:
         processingChannel = fastaChannel
-            .filter
+            .filter \
             {
-                genomeInfo, fastaFile ->
-                def bwamemBase = "${assemblyPath(genomeInfo)}/bwamem2-${params.BWAMEM2_VERSION}/${genomeInfo.base}"
+                r ->
+                def bwamemBase = "${assemblyPath(r.genomeInfo)}/bwamem2-${params.BWAMEM2_VERSION}/${r.genomeInfo.base}"
                 def requiredFiles = [ file("${bwamemBase}.0123"), file("${bwamemBase}.bwt.2bit.64"), file("${bwamemBase}.pac") ]
                 return requiredFiles.any { !it.exists() }
             }

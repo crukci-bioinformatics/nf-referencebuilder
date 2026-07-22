@@ -1,5 +1,3 @@
-include { assemblyPath } from '../functions/functions'
-
 process bwaIndex
 {
     label 'builder'
@@ -7,7 +5,7 @@ process bwaIndex
     publishDir "${assemblyPath(genomeInfo)}", mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(fastaFile)
+        record(genomeInfo: Map, fastaFile: Path)
 
     output:
         tuple val(genomeInfo), path(indexDir)
@@ -33,10 +31,10 @@ workflow bwaWF
 
     main:
         processingChannel = fastaChannel
-            .filter
+            .filter \
             {
-                genomeInfo, fastaFile ->
-                def bwaBase = "${assemblyPath(genomeInfo)}/bwa-${params.BWA_VERSION}/${genomeInfo.base}"
+                r ->
+                def bwaBase = "${assemblyPath(r.genomeInfo)}/bwa-${params.BWA_VERSION}/${r.genomeInfo.base}"
                 def requiredFiles = [ file("${bwaBase}.bwt"), file("${bwaBase}.pac"), file("${bwaBase}.sa") ]
                 return requiredFiles.any { !it.exists() }
             }

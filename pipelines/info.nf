@@ -1,21 +1,23 @@
+nextflow.enable.types = true
+
+include { readGenomeInfo; assemblyPath } from '../functions'
+
 /*
  * Pipeline to put a copy of the genome info properties into the
  * assembly directory.
  */
 
-include { assemblyPath; readGenomeInfo } from '../functions/functions'
-
 process copyGenomeInfoFile
 {
     label 'tiny'
 
-    publishDir "${assemblyPath(genomeInfo)}", mode: 'copy'
+    publishDir { "${assemblyPath(genomeInfo)}" }, mode: 'copy'
 
     input:
-        tuple val(genomeInfo), path(genomeInfoFile)
+        record(genomeInfo: Properties, genomeInfoFile: Path)
 
     output:
-        tuple val(genomeInfo), path(infoFileName)
+        record(genomeInfo: genomeInfo, infoFile: file(infoFileName))
 
     shell:
         infoFileName = 'AssemblyInfo.properties'
@@ -27,20 +29,15 @@ process copyGenomeInfoFile
 workflow genomeInfoWF
 {
     take:
-        genomeInfoFileChannel
+        genomeInfoFileChannel: Channel<Path>
 
     main:
-
         genomeInfoChannel = genomeInfoFileChannel
-            .map
-            {
-                tuple readGenomeInfo(it), it
+            .map { f ->
+                record(genomeInfo: readGenomeInfo(f), genomeInfoFile: f)
             }
-            .filter
-            {
-                genomeInfo, genomeInfoFile ->
-                def localFile = file("${assemblyPath(genomeInfo)}/AssemblyInfo.properties")
-                return !localFile.exists()
+            .filter { r ->
+                !file("${assemblyPath(r.genomeInfo)}/AssemblyInfo.properties").exists()
             }
 
         copyGenomeInfoFile(genomeInfoChannel)
