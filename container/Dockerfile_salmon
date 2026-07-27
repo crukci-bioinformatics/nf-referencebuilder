@@ -1,0 +1,5 @@
+FROM    combinelab/salmon:2.3.4
+
+# The container as supplied does not include the "ps" command required by Nextflow.
+
+RUN apt-get update -y && apt-get install --reinstall -y procps && rm -rf /var/lib/apt/lists/*
