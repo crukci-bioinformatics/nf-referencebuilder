@@ -64,7 +64,7 @@ process indexTranscripts
 
 process createDecoys
 {
-    memory 64.M
+    memory 64.MB
 
     input:
         record(genomeInfo: Properties, genomeFile: Path, transcriptsFile: Path?)
