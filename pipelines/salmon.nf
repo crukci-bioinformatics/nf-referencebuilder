@@ -67,7 +67,7 @@ process createDecoys
     label 'tiny'
 
     input:
-        record(genomeInfo: Properties, genomeFile: Path, transcriptsFile: Path)
+        record(genomeInfo: Properties, genomeFile: Path, transcriptsFile: Path?)
 
     output:
         record(genomeInfo: genomeInfo, decoysFile: file(decoysFile))
@@ -77,7 +77,7 @@ process createDecoys
 
         """
         cat "!{genomeFile}" | \
-        grep '>' | \
+        egrep '^>' | \
         cut -d " " -f 1 | \
         sed 's/>//' > \
         "${decoysFile}"
