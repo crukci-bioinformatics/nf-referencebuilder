@@ -11,7 +11,7 @@ include { assemblyPath } from '../functions'
 
 process fetchTranscripts
 {
-    label 'tiny'
+    label 'fetcher'
 
     input:
         record(genomeInfo: Properties, genomeFile: Path)
@@ -64,7 +64,7 @@ process indexTranscripts
 
 process createDecoys
 {
-    label 'tiny'
+    memory 64.M
 
     input:
         record(genomeInfo: Properties, genomeFile: Path, transcriptsFile: Path?)
