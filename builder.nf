@@ -18,6 +18,8 @@ include { effectiveGenomeSizesWF } from './pipelines/effectiveSizes'
 
 workflow
 {
+    log.info("Top level reference directory (params.referenceTop) is ${params.referenceTop}")
+
     hgConfChannel = setupWF()
 
     genomeInfoFileChannel = channel.fromPath("${params.genomeInfoDirectory}/*.properties")
