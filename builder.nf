@@ -4,17 +4,17 @@ nextflow.enable.types = true
 
 include { readGenomeInfo } from './functions'
 
-include { setupWF } from './pipelines/setup'
-include { genomeInfoWF } from './pipelines/info'
-include { fastaWF } from './pipelines/fasta'
-include { annotationWF } from './pipelines/annotation'
-include { geneNamesWF } from './pipelines/geneNames'
-include { bwaWF } from './pipelines/bwa'
-include { bwamem2WF } from './pipelines/bwamem2'
-include { bowtie2WF } from './pipelines/bowtie2'
-include { starWF } from './pipelines/star'
-include { salmonWF } from './pipelines/salmon'
-include { effectiveGenomeSizesWF } from './pipelines/effectiveSizes'
+include { setupWF } from './workflows/setup'
+include { genomeInfoWF } from './workflows/info'
+include { fastaWF } from './workflows/fasta'
+include { annotationWF } from './workflows/annotation'
+include { geneNamesWF } from './workflows/geneNames'
+include { bwaWF } from './workflows/bwa'
+include { bwamem2WF } from './workflows/bwamem2'
+include { bowtie2WF } from './workflows/bowtie2'
+include { starWF } from './workflows/star'
+include { salmonWF } from './workflows/salmon'
+include { effectiveGenomeSizesWF } from './workflows/effectiveSizes'
 
 workflow
 {
